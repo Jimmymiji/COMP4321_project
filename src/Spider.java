@@ -8,10 +8,12 @@ import java.util.Vector;
 import java.util.HashMap;
 import java.util.HashSet;
 import org.htmlparser.beans.StringBean;
+import org.htmlparser.beans.FilterBean;
 import org.htmlparser.Node;
 import org.htmlparser.NodeFilter;
 import org.htmlparser.Parser;
 import org.htmlparser.filters.AndFilter;
+import org.htmlparser.filters.TagNameFilter;
 import org.htmlparser.filters.NodeClassFilter;
 import org.htmlparser.tags.LinkTag;
 import org.htmlparser.util.NodeList;
@@ -31,37 +33,50 @@ public class Spider
 	{
 		url = _url;
 	}
-	public Vector<String> extractWords() throws ParserException
+	public Vector<String> extractWords(String url) throws ParserException
 	{
 		// extract words in url and return them
 		// use StringTokenizer to tokenize the result from StringBean
 		// ADD YOUR CODES HERE
-		 Vector<String> result = new Vector<String>();
-                StringBean bean = new StringBean();
-                bean.setURL(url);
-                bean.setLinks(false);
-                String contents = bean.getStrings();
-                StringTokenizer st = new StringTokenizer(contents);
-                while (st.hasMoreTokens()) {
-                    result.add(st.nextToken());
-                }
-                return result;
+		Vector<String> result = new Vector<String>();
+		StringBean bean = new StringBean();
+        bean.setURL(url);
+        bean.setLinks(false);
+        String contents = bean.getStrings();
+        StringTokenizer st = new StringTokenizer(contents);
+        while (st.hasMoreTokens()) {
+            result.add(st.nextToken());
+        }
+        return result;
 			
 	}
-	public Vector<String> extractLinks() throws ParserException
+	public Vector<String> extractLinks(String url) throws ParserException
 
 	{
 		// extract links in url and return them
 		// ADD YOUR CODES HERE
 		Vector<String> result = new Vector<String>();
-                LinkBean bean = new LinkBean();
-                bean.setURL(url);
-                URL[] urls = bean.getLinks();
-                for (URL s : urls) {
-                    result.add(s.toString());
-                }
-                return result;
+        LinkBean bean = new LinkBean();
+        bean.setURL(url);
+        URL[] urls = bean.getLinks();
+        for (URL s : urls) {
+            result.add(s.toString());
+        }
+        return result;
                 
+	}
+
+	public Vector<String> extractTitle(String url) throws ParserException
+	{
+		Vector<String> result = new Vector<String>();
+		FilterBean fb = new FilterBean ();
+     	fb.setFilters (new NodeFilter[] { new TagNameFilter ("title") });
+     	fb.setURL (url);
+        StringTokenizer st = new StringTokenizer(fb.getText());
+            while (st.hasMoreTokens()) {
+                result.add(st.nextToken());
+            }
+            return result;
 	}
 
 	// Crawl a single webpage. Return a vector with size > 0 if the webpage has not
@@ -87,15 +102,16 @@ public class Spider
 					return res;
 				}
 			}
-			Spider spider = new Spider(url);
-			Vector<String> words = spider.extractWords();
-			Vector<String> links = spider.extractLinks();
+			Vector<String> words = extractWords(url);
+			Vector<String> links = extractLinks(url);
+			Vector<String> title = extractTitle(url);
 			Vector<String> date_vec = new Vector<String>(); // store date string as vector to return it.
 			date_vec.add(String.valueOf(date));
 
 			res.add(words);
 			res.add(links);
 			res.add(date_vec);
+			res.add(title);
 		}
 		catch(Exception e){
 			e.printStackTrace();
@@ -143,7 +159,7 @@ public class Spider
 					// params: 
 					//	id_date: doc id and last modified date
 					//	cnt_link: content and link of the web page
-					indexer.updateOnePage(crawl_res.get(0),crawl_res.get(0),count,crawl_res.get(2).get(0));
+					indexer.updateOnePage(crawl_res.get(0),crawl_res.get(3),count,crawl_res.get(2).get(0));
 
 					fl.updateLinkDB(db,vec);
 				}
