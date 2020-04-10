@@ -231,7 +231,7 @@ public class Spider
 		String dbPath = "db/db";
 		InvertedIndex indexer;
 		try{
-			indexer = new InvertedIndex("db/db1","db/db2","db/db3");
+			indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5");
 			indexer.loadFromDatabse();
 		}
 		catch(Exception e){
