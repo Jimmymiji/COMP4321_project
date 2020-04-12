@@ -130,8 +130,7 @@ public class Spider
 			start_vec.add(url);
 			q.add(start_vec);
 
-			int num_crawled = 0;
-			while(num_crawled<page_count && q.size()>0){
+			while(count<page_count && q.size()>0){
 				Vector<String> vec = q.remove();
 				Vector<Vector<String>> crawl_res = crawlWebpage(db,vec.get(1),indexer); 
 
@@ -147,10 +146,9 @@ public class Spider
 					}
 
 					if(db.get(vec.get(1).getBytes()) == null){
-						num_crawled += 1;
+						count = addUrl(db, vec.get(1));
 					}
-
-					count = addUrl(db, vec.get(1));
+					
 
 					Vector<String> id_date = new Vector<String>(); //ID and date
 					id_date.add(String.valueOf(count));
@@ -268,7 +266,7 @@ public class Spider
 
 			// javac -cp lib/htmlparser.jar:lib/rocksdbjni-6.8.0-linux64.jar COMP4321/*.java 
 			// java -cp lib/rocksdbjni-6.8.0-linux64.jar:lib/htmlparser.jar:. COMP4321.Spider
-			Spider spider = new Spider("https://cse.ust.hk");
+			Spider spider = new Spider("https://www.seng.ust.hk");
 			//"https://stackoverflow.com/questions/7846136/how-to-get-last-modified-date-from-header-to-string"
 			spider.BFSCrawl(db, 30, fl,indexer);
 			spider.printdb(db);
