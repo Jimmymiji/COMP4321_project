@@ -266,7 +266,7 @@ public class Spider
 
 			// javac -cp lib/htmlparser.jar:lib/rocksdbjni-6.8.0-linux64.jar COMP4321/*.java 
 			// java -cp lib/rocksdbjni-6.8.0-linux64.jar:lib/htmlparser.jar:. COMP4321.Spider
-			Spider spider = new Spider("https://cse.ust.hk");
+			Spider spider = new Spider("https://www.seng.ust.hk");
 			//"https://stackoverflow.com/questions/7846136/how-to-get-last-modified-date-from-header-to-string"
 			spider.BFSCrawl(db, 30, fl,indexer);
 			spider.printdb(db);
