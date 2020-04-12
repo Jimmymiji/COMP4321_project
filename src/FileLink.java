@@ -93,6 +93,16 @@ public class FileLink
 
 	}
 
+	public HashSet<String> getChildren(String ID){
+		return linkDB.get(ID).getChildren();
+
+	}
+
+
+	public HashSet<String> getParents(String ID){
+		return linkDB.get(ID).getParents();
+
+	}
 }
 
 class Links implements Serializable{
