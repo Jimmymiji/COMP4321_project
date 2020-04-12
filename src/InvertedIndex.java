@@ -112,7 +112,9 @@ public class InvertedIndex
                 value = value.substring(0,value.length()-1);
                 value = value + ";";
             }
-            value = value.substring(0,value.length()-1);
+            if(value.length() > 0){
+                value = value.substring(0,value.length()-1);
+            }
             this.contentDb.put(word.getBytes(),value.getBytes());
         }
 
@@ -173,6 +175,12 @@ public class InvertedIndex
 
 
     public void updateOnePage(Vector<String> content,Vector<String> title,int ID,String date){
+        if(content.size()==0){
+            content.add(new String("NULL"));
+        }
+        if(title.size()==0){
+            title.add(new String("NULL"));
+        }
         Vector<String> keyWords = new Vector<String>();
         int pageSize = 0;
         String titleString = new String();
@@ -207,6 +215,9 @@ public class InvertedIndex
     }
 
     public void countKeyWordInFile(Vector<String> words,int ID){
+        if(words.size()==0){
+            words.add(new String("NULL"));
+        }
         HashMap<String,Integer> countTable = new HashMap<String,Integer>();
         for (String word:words){
             Integer count = countTable.get(word);
