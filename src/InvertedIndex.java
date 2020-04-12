@@ -14,22 +14,24 @@ import static java.util.Map.Entry.*;
 public class InvertedIndex
 {
     public RocksDB contentDb;
-    public RocksDB titleDb;
+    public RocksDB titleKeyWordDb;
     public RocksDB dateDb;
     public RocksDB wordCountDb;
     public RocksDB pageSizeDb;
+    public RocksDB titleDb;
     private Options options;
     private HashMap<String, HashMap<Integer, ArrayList<Integer>>> contentInvertedTable;
     private HashMap<String, HashMap<Integer, ArrayList<Integer>>> titleInvertedTable;
     private StopStem stopStem;
 
-    InvertedIndex(String ContentDbPath,String TitleDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath) throws RocksDBException
+    InvertedIndex(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath) throws RocksDBException
     {
         if(!checkDbPath(ContentDbPath) ||
-            !checkDbPath(TitleDbPath)  ||
+            !checkDbPath(titleKeyWordDbPath)  ||
             !checkDbPath(dateDbPath) ||
             !checkDbPath(wordCountDbPath) ||
-            !checkDbPath(pageSizeDbPath) ){
+            !checkDbPath(pageSizeDbPath) ||
+            !checkDbPath(titleDbPath) ){
                 System.out.println("indexer check path failed");
         }
        
@@ -37,10 +39,11 @@ public class InvertedIndex
         this.options = new Options();
         this.options.setCreateIfMissing(true);
         this.contentDb = RocksDB.open(this.options, ContentDbPath);
-        this.titleDb = RocksDB.open(this.options, TitleDbPath);
+        this.titleKeyWordDb = RocksDB.open(this.options, titleKeyWordDbPath);
         this.dateDb = RocksDB.open(this.options,dateDbPath);
         this.wordCountDb = RocksDB.open(this.options,wordCountDbPath);
         this.pageSizeDb = RocksDB.open(this.options,pageSizeDbPath);
+        this.titleDb = RocksDB.open(this.options,titleDbPath);
         this.stopStem = new StopStem("stopwords.txt");
         this.titleInvertedTable = new HashMap<String, HashMap<Integer, ArrayList<Integer>>>();
         this.contentInvertedTable = new HashMap<String, HashMap<Integer, ArrayList<Integer>>>();
@@ -67,7 +70,7 @@ public class InvertedIndex
             this.contentInvertedTable.put(word,docPosMap);
         }
 
-        RocksIterator titleIter = this.titleDb.newIterator();
+        RocksIterator titleIter = this.titleKeyWordDb.newIterator();
         for(titleIter.seekToFirst(); titleIter.isValid(); titleIter.next()) {
         
             String word = new String(titleIter.key());
@@ -132,7 +135,7 @@ public class InvertedIndex
                 value = value + ";";
             }
             value = value.substring(0,value.length()-1);
-            this.titleDb.put(word.getBytes(),value.getBytes());
+            this.titleKeyWordDb.put(word.getBytes(),value.getBytes());
         }
     }
 
@@ -172,6 +175,7 @@ public class InvertedIndex
     public void updateOnePage(Vector<String> content,Vector<String> title,int ID,String date){
         Vector<String> keyWords = new Vector<String>();
         int pageSize = 0;
+        String titleString = new String();
         for(int i = 0;i<content.size();i++){
             String word = content.get(i);
             pageSize = pageSize + word.length();
@@ -184,15 +188,18 @@ public class InvertedIndex
         }
         for(int i = 0;i<title.size();i++){
             String word = title.get(i);
+            titleString = titleString + word + " ";
             if (stopStem.isStopWord(word)){
                 continue;
             }
             addCountTitle(stopStem.stem(word),ID,i);
         }
+        titleString = titleString.substring(0,titleString.length()-1);
         countKeyWordInFile(keyWords,ID);
         try{
             this.dateDb.put(String.valueOf(ID).getBytes(),date.getBytes());
             this.pageSizeDb.put(String.valueOf(ID).getBytes(),String.valueOf(pageSize).getBytes());
+            this.titleDb.put(String.valueOf(ID).getBytes(),titleString.getBytes());
         }
         catch(Exception e){
 			e.printStackTrace();
@@ -265,6 +272,16 @@ public class InvertedIndex
         }
     }
 
+    public String getPageTitle(int ID) throws RocksDBException {
+        byte[] content = this.titleDb.get(String.valueOf(ID).getBytes());
+        if (content == null){
+            return null;
+        }
+        else{
+            return new String(content);
+        }
+    }
+
 	public void printDB(RocksDB db){
         RocksIterator iter = db.newIterator();
 
@@ -288,11 +305,11 @@ public class InvertedIndex
             // a static method that loads the RocksDB C++ library.
             RocksDB.loadLibrary();
             
-            InvertedIndex indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5");
+            InvertedIndex indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6");
             indexer.loadFromDatabse();
-            indexer.printDB(indexer.pageSizeDb);
-            System.out.println("page size of 10: "+String.valueOf(indexer.getPageSize(10)));
-            System.out.println("page size of 20: "+String.valueOf(indexer.getPageSize(20)));
+            indexer.printDB(indexer.titleDb);
+            System.out.println("title of 10: "+indexer.getPageTitle(10));
+            System.out.println("title of 20: "+indexer.getPageTitle(20));
 
         }
         catch(RocksDBException e)
