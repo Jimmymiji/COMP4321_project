@@ -130,8 +130,7 @@ public class Spider
 			start_vec.add(url);
 			q.add(start_vec);
 
-			int num_crawled = 0;
-			while(num_crawled<page_count && q.size()>0){
+			while(count<page_count && q.size()>0){
 				Vector<String> vec = q.remove();
 				Vector<Vector<String>> crawl_res = crawlWebpage(db,vec.get(1),indexer); 
 
@@ -147,10 +146,9 @@ public class Spider
 					}
 
 					if(db.get(vec.get(1).getBytes()) == null){
-						num_crawled += 1;
+						count = addUrl(db, vec.get(1));
 					}
-
-					count = addUrl(db, vec.get(1));
+					
 
 					Vector<String> id_date = new Vector<String>(); //ID and date
 					id_date.add(String.valueOf(count));
