@@ -7,6 +7,7 @@ import java.util.LinkedList;
 import java.util.Vector;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Date;
 import org.htmlparser.beans.StringBean;
 import org.htmlparser.beans.FilterBean;
 import org.htmlparser.Node;
@@ -129,7 +130,8 @@ public class Spider
 			start_vec.add(url);
 			q.add(start_vec);
 
-			while(count<page_count && q.size()>0){
+			int num_crawled = 0;
+			while(num_crawled<page_count && q.size()>0){
 				Vector<String> vec = q.remove();
 				Vector<Vector<String>> crawl_res = crawlWebpage(db,vec.get(1),indexer); 
 
@@ -143,6 +145,11 @@ public class Spider
 						page_vec.add(links.get(i));
 						q.add(page_vec);
 					}
+
+					if(db.get(vec.get(1).getBytes()) == null){
+						num_crawled += 1;
+					}
+
 					count = addUrl(db, vec.get(1));
 
 					Vector<String> id_date = new Vector<String>(); //ID and date
