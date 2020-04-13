@@ -88,7 +88,7 @@ public class Test
 			    }
 				
 				// 6. Separation line
-				System.out.println("--------------------------------------");
+				System.out.println("------------------------------------------------------");
 
 			}
 			// indexer.printDB(indexer.dateDb);

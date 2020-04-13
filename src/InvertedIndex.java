@@ -260,7 +260,6 @@ public class InvertedIndex
         String[] pairList = countString.split(";");
         for (String pair:pairList){
             String[] p = pair.split(":");
-            System.out.println( p[0] + "：" + p[1]);
             countTable.put(p[0],p[1]);
         }
         return countTable;
