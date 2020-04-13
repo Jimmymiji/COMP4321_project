@@ -35,7 +35,6 @@ public class InvertedIndex
                 System.out.println("indexer check path failed");
         }
        
-        System.out.println("init indexer");
         this.options = new Options();
         this.options.setCreateIfMissing(true);
         this.contentDb = RocksDB.open(this.options, ContentDbPath);
@@ -192,7 +191,9 @@ public class InvertedIndex
             }
             String stemWord = stopStem.stem(word);
             addCountContent(stemWord,ID,i);
-            keyWords.add(stemWord);
+            if (!stemWord.equals("")){
+                keyWords.add(stemWord);
+            }
         }
         for(int i = 0;i<title.size();i++){
             String word = title.get(i);
@@ -317,10 +318,41 @@ public class InvertedIndex
             RocksDB.loadLibrary();
             
             InvertedIndex indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6");
-            indexer.loadFromDatabse();
-            indexer.printDB(indexer.titleDb);
-            System.out.println("title of 10: "+indexer.getPageTitle(10));
-            System.out.println("title of 20: "+indexer.getPageTitle(20));
+            System.out.println("contentDb");
+            System.out.println("Key : hkust" );
+            byte[] content = indexer.contentDb.get(new String("hkust").getBytes());
+            System.out.println("Value : " + new String(content));
+
+            System.out.println("");
+            System.out.println("titleKeyWordDb");
+            System.out.println("Key : hkust");
+            content = indexer.titleKeyWordDb.get(new String("hkust").getBytes());
+            System.out.println("Value : " + new String(content));
+
+            System.out.println("");
+            System.out.println("dateDb");
+            System.out.println("Key : 1");
+            content = indexer.dateDb.get(new String("1").getBytes());
+            System.out.println("Value : " + new String(content));
+
+            System.out.println("");
+            System.out.println("wordCountDb");
+            System.out.println("Key : 1");
+            content = indexer.wordCountDb.get(new String("1").getBytes());
+            System.out.println("Value : " + new String(content));
+
+            System.out.println("");
+            System.out.println("pageSizeDb");
+            System.out.println("Key : 1");
+            content = indexer.pageSizeDb.get(new String("1").getBytes());
+            System.out.println("Value : " + new String(content));
+
+            System.out.println("");
+            System.out.println("tileDb");
+            System.out.println("Key : 1");
+            content = indexer.titleDb.get(new String("1").getBytes());
+            System.out.println("Value : " + new String(content));
+
 
         }
         catch(RocksDBException e)

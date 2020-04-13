@@ -1,0 +1,17 @@
+InvertedIndex:
+contentDb: it is the invertedindex file invertedly indexing the body of webpages. Key is the stemed word and value is a string containing the page IDs and the postion list of the key word in each page.
+           word => "ID1:pos1,pos2,pos3;ID2:pos1,pos2,pos3......."
+titleKeyWordDb: it is the invertedindex file invertedly indexing the title of webpages. Key is the stemed word and value is a string containing the page IDs and the postion list of the key word in each page.
+           word => "ID1:pos1,pos2,pos3;ID2:pos1,pos2,pos3......."
+dateDb: it is the database containing the lastmodified date of each page, if it is not avaliable, it will be stored as 0
+           pageID => lastmodified date
+wordCountDb: it is the database counting the key word frequency in each page, key is page ID value is key word frequency
+            pageID => "keyword1:frequency1;keyword2:frequency2......"
+pageSizeDb: it is the database containing the size of each page
+            pageID => page size 
+titleDb: it is the databse containing the title of each page
+            pageID => page title
+
+You can run 
+    java  -cp ./lib/htmlparser.jar:./lib/rocksdbjni-6.8.0-linux64.jar:./   comp4321.InvertedIndex
+to see the examples of content in each database
