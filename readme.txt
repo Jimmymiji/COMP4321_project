@@ -1,3 +1,10 @@
+Before Start:
+	mkdir db
+	mkdir lib
+	move htmlparser.jar  rocksdbjni-6.8.0-linux64.jar to folder lib
+
+
+
 To compile:
 javac -d ./ -cp ./lib/htmlparser.jar:./lib/rocksdbjni-6.8.0-linux64.jar:./   src/*.java
 
