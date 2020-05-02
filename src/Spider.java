@@ -82,10 +82,11 @@ public class Spider
 
 	// Crawl a single webpage. Return a vector with size > 0 if the webpage has not
 	// been crawled before.
-	public Vector<Vector<String>> crawlWebpage(RocksDB db, String url,InvertedIndex indexer){
+	public Vector<Vector<String>> crawlWebpage(RocksDB db, Vector<String> vec,FileLink fl,InvertedIndex indexer){
 		Vector<Vector<String>> res = new Vector<Vector<String>>();
 
 		try{
+			String url = vec.get(1);
 			URL obj = new URL(url);
 			HttpURLConnection conn = (HttpURLConnection) obj.openConnection();
 			long date = conn.getLastModified();
@@ -100,6 +101,7 @@ public class Spider
 			} 
 			if(content!=null){
 				if(date>0 && date<=prev_date){   
+					fl.updateLinkDB(db,vec);
 					return res;
 				}
 			}
@@ -132,7 +134,7 @@ public class Spider
 
 			while(count<page_count && q.size()>0){
 				Vector<String> vec = q.remove();
-				Vector<Vector<String>> crawl_res = crawlWebpage(db,vec.get(1),indexer); 
+				Vector<Vector<String>> crawl_res = crawlWebpage(db,vec,fl,indexer); 
 
 				if(crawl_res.size()>0){// a new page has been crawled!
 					System.out.println("Crawling "+vec.get(1));

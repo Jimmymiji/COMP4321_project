@@ -46,7 +46,9 @@ public class FileLink
 
 			String cID = new String(db.get(c.getBytes()));
 			Links link = new Links(new HashSet<String>(), new HashSet<String>());
-			linkDB.put(cID, link);
+			if (linkDB.get(cID)==null){
+				linkDB.put(cID, link);
+			}
 			if(p==null){//the starting URL
 				return;
 			}
