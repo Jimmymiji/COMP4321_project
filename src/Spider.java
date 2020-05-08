@@ -238,8 +238,8 @@ public class Spider
 		String dbPath = "db/db";
 		InvertedIndex indexer;
 		try{
-			indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6");
-			indexer.loadFromDatabse();
+			indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6", "db/db7", "db/db8");
+			indexer.loadFromDatabase();
 		}
 		catch(Exception e){
 			e.printStackTrace();
@@ -273,6 +273,7 @@ public class Spider
 			spider.BFSCrawl(db, 30, fl,indexer);
 			spider.printdb(db);
 			fl.storeLinkDB("linkdb");
+			indexer.updateTermWeightAndDocNorm();
 			
 		}
 		catch (Exception e)

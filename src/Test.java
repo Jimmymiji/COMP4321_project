@@ -36,8 +36,8 @@ public class Test
         {
             // a static method that loads the RocksDB C++ library.
             RocksDB.loadLibrary();
-            InvertedIndex indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5", "db/db6");
-            indexer.loadFromDatabse();
+            InvertedIndex indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5", "db/db6", "db/db7", "db/db8");
+            indexer.loadFromDatabase();
 			// URL-ID DB
 			Options options = new Options();
 			options.setCreateIfMissing(true);
@@ -74,7 +74,7 @@ public class Test
 
 				// 4. Keyword - Frequency
 				System.out.println("Key-Frequency: ");
-				HashMap<String, String> WordCount = indexer.getFileWordCount(PageID);
+				HashMap<String, Integer> WordCount = indexer.getFileWordCount(PageID);
 				WordCount.forEach((key,value) -> System.out.printf(key + " " + value + "; "));
 				System.out.println("");
 

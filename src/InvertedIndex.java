@@ -7,8 +7,10 @@ import java.util.*;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.StringTokenizer;
 import static java.util.stream.Collectors.*;
 import static java.util.Map.Entry.*;
+import java.lang.Math;
 
 
 public class InvertedIndex
@@ -19,19 +21,25 @@ public class InvertedIndex
     public RocksDB wordCountDb;
     public RocksDB pageSizeDb;
     public RocksDB titleDb;
+    public RocksDB termWeightDb;
+    public RocksDB docNormDb;
     private Options options;
     private HashMap<String, HashMap<Integer, ArrayList<Integer>>> contentInvertedTable;
     private HashMap<String, HashMap<Integer, ArrayList<Integer>>> titleInvertedTable;
+    private HashMap<String, HashMap<Integer, Double>> termWeightTable;
+    private HashMap<Integer, Double> docNormTable;
     private StopStem stopStem;
 
-    InvertedIndex(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath) throws RocksDBException
+    InvertedIndex(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath, String termWeightDbPath, String docNormDbPath) throws RocksDBException
     {
         if(!checkDbPath(ContentDbPath) ||
             !checkDbPath(titleKeyWordDbPath)  ||
             !checkDbPath(dateDbPath) ||
             !checkDbPath(wordCountDbPath) ||
             !checkDbPath(pageSizeDbPath) ||
-            !checkDbPath(titleDbPath) ){
+            !checkDbPath(titleDbPath) ||
+            !checkDbPath(termWeightDbPath) ||
+            !checkDbPath(docNormDbPath) ){
                 System.out.println("indexer check path failed");
         }
        
@@ -43,12 +51,16 @@ public class InvertedIndex
         this.wordCountDb = RocksDB.open(this.options,wordCountDbPath);
         this.pageSizeDb = RocksDB.open(this.options,pageSizeDbPath);
         this.titleDb = RocksDB.open(this.options,titleDbPath);
+        this.termWeightDb = RocksDB.open(this.options,termWeightDbPath);
+        this.docNormDb = RocksDB.open(this.options,docNormDbPath);
         this.stopStem = new StopStem("stopwords.txt");
         this.titleInvertedTable = new HashMap<String, HashMap<Integer, ArrayList<Integer>>>();
         this.contentInvertedTable = new HashMap<String, HashMap<Integer, ArrayList<Integer>>>();
+    	this.termWeightTable = new HashMap<String, HashMap<Integer, Double>>();
+    	this.docNormTable = new HashMap<Integer, Double>();
     }
 
-    public void loadFromDatabse() throws RocksDBException{
+    public void loadFromDatabase() throws RocksDBException{
         RocksIterator contentIter = this.contentDb.newIterator();
         for(contentIter.seekToFirst(); contentIter.isValid(); contentIter.next()) {
         
@@ -88,9 +100,45 @@ public class InvertedIndex
             }
             this.titleInvertedTable.put(word,docPosMap);
         }
-
+		
+		RocksDB URLdb = RocksDB.open(options, "db/db");
+		RocksIterator iter = URLdb.newIterator();
+		// build a forwarded table: ID - URL
+		HashMap<String,String> IDtoURL = new HashMap<String,String>();
+		for(iter.seekToFirst(); iter.isValid(); iter.next()){
+			String URL = new String(iter.key());
+			String PageID = new String(iter.value());
+			if (!URL.equals("total_count")){
+				IDtoURL.put(PageID,URL);
+			}
+		}
     }
 
+
+    public void setUpSearchEngine() throws RocksDBException{
+		System.out.println("setting up search engine...");
+        RocksIterator termWeightIter = this.termWeightDb.newIterator();
+        for(termWeightIter.seekToFirst(); termWeightIter.isValid(); termWeightIter.next()) {
+        
+            String word = new String(termWeightIter.key());
+            String wordWeight = new String(termWeightIter.value());
+            String[] docAndWeightStrs = wordWeight.split(";");
+            HashMap<Integer,Double> docWeightMap = new HashMap<Integer, Double>();
+            for(String weightStr : docAndWeightStrs){
+                int ID = Integer.parseInt(weightStr.substring(0,weightStr.indexOf(":")));
+                double weight = Double.parseDouble(weightStr.substring(weightStr.indexOf(":")+1));
+                docWeightMap.put(ID,weight);
+            }
+            this.termWeightTable.put(word,docWeightMap);
+        }
+
+        RocksIterator docNormIter = this.docNormDb.newIterator();
+        for(docNormIter.seekToFirst(); docNormIter.isValid(); docNormIter.next()) {
+            int pageID = Integer.parseInt(new String(docNormIter.key()));
+            double norm = Double.parseDouble(new String(docNormIter.value()));
+            this.docNormTable.put(pageID,norm);
+        }
+    }
 
     public void writeToDatabase() throws RocksDBException{
         Iterator<HashMap.Entry<String, HashMap<Integer, ArrayList<Integer>>>> contentIt = this.contentInvertedTable.entrySet().iterator();
@@ -245,7 +293,7 @@ public class InvertedIndex
         
     }
 
-    public HashMap<String,String> getFileWordCount(int ID){
+    public HashMap<String,Integer> getFileWordCount(int ID){
         byte[] content = null;
         try{
             content = this.wordCountDb.get(String.valueOf(ID).getBytes());
@@ -255,12 +303,12 @@ public class InvertedIndex
         if(content == null){
             return null;
         }
-        HashMap<String,String> countTable = new HashMap<String,String>();
+        HashMap<String,Integer> countTable = new HashMap<String,Integer>();
         String countString = new String(content);
         String[] pairList = countString.split(";");
         for (String pair:pairList){
             String[] p = pair.split(":");
-            countTable.put(p[0],p[1]);
+            countTable.put(p[0],Integer.parseInt(p[1]));
         }
         return countTable;
     }
@@ -311,13 +359,118 @@ public class InvertedIndex
         return true;
     }
 
+	/*update termweight = tf/tfmax*idf and doc norm*/
+    public void updateTermWeightAndDocNorm() throws RocksDBException{
+		System.out.println("updating Term Weight DB and Document Norm DB...");
+		HashMap<Integer, Double> norms = new HashMap<Integer, Double>(); // store |Di|
+
+		// step 1: count total number of documents: N
+		RocksIterator iter = this.wordCountDb.newIterator();
+		int N = 0;
+		for(iter.seekToFirst(); iter.isValid(); iter.next()){
+			N = N + 1;
+		}
+
+		// step 2: calculate idf, tf, tfmax
+		for (Map.Entry<String, HashMap<Integer, ArrayList<Integer>>> entry : this.contentInvertedTable.entrySet()) {
+		    String term = entry.getKey();
+			HashMap<Integer,ArrayList<Integer>> docPosMap = entry.getValue();
+			int df = docPosMap.size(); //df
+			double idf = Math.log((double)N/df) / Math.log(2); //idf
+
+			String value = new String("");
+			for (Map.Entry<Integer, ArrayList<Integer>> e : docPosMap.entrySet()) {
+			    Integer pageID = e.getKey();
+				value = value + pageID + ":";
+				ArrayList<Integer> posListInt = e.getValue();
+				Integer tf = posListInt.size(); //tf
+				HashMap<String, Integer> WordCount = this.getFileWordCount(pageID);
+				Integer tfmax = Collections.max(WordCount.values()); //tfmax
+				value = value + String.format("%.3f", ((double)tf)/tfmax * idf) + ";";
+
+				// update norm table
+				double norm = norms.containsKey(pageID) ? norms.get(pageID) : 0;
+				norms.put(pageID, norm + Math.pow(((double)tf)/tfmax * idf, 2));
+			}
+			// write to termWeightDb
+			if(value.length() > 0){
+				value = value.substring(0,value.length()-1);
+			}
+			this.termWeightDb.put(term.getBytes(),value.getBytes());
+		}
+		// write to docNormDb
+		for (Map.Entry<Integer, Double> entry : norms.entrySet()) {
+		    String ID = Integer.toString(entry.getKey());
+			String norm = Double.toString(entry.getValue());
+			this.docNormDb.put(ID.getBytes(),norm.getBytes());
+		}
+    }
+
+
+	/*return final scores (after normalization if any)*/
+    public HashMap<Integer, Double> searchAndScore(String query){
+		HashMap<Integer, Double> results = new HashMap<Integer, Double>();
+		Vector<String> queryVector = new Vector<String>();
+		StringTokenizer st = new StringTokenizer(query);
+		while (st.hasMoreTokens()) {
+			queryVector.add(st.nextToken());
+		}
+		// stop and stem for raw query
+		Vector<String> keyWords = new Vector<String>();
+		for(int i = 0;i < queryVector.size(); i++){
+			String word = queryVector.get(i);
+			if (stopStem.isStopWord(word)){
+				continue;
+			}
+			String stemWord = stopStem.stem(word);
+            if (!stemWord.equals("")){
+				keyWords.add(stemWord);
+			}
+		}
+		System.out.println(keyWords);
+		// calculate |Q| for cosine similarity
+		double normQ = Math.sqrt(keyWords.size());
+
+		for (String word:keyWords){
+			HashMap<Integer,Double> docWeightMap = this.termWeightTable.get(word);
+			if (docWeightMap == null){
+				// keyword not found
+				continue;
+			}
+
+			for(Map.Entry<Integer, Double> entry : docWeightMap.entrySet()) {
+			    int pageID = entry.getKey();
+				double weight = entry.getValue();
+				// update partial score table
+				double score = results.containsKey(pageID) ? results.get(pageID) : 0;
+				results.put(pageID, score + weight);
+			}
+		}
+		// update results by doing normalization (cosine)
+		for (Integer key : results.keySet()) {
+			results.replace(key, ((double)results.get(key)) / (Math.sqrt(this.docNormTable.get(key)) * normQ));
+		}
+
+		if(results.isEmpty()){
+			return null;	
+		}
+		return results;
+    }
+
     public static void main(String[] args){
         try
         {
-            // a static method that loads the RocksDB C++ library.
+
             RocksDB.loadLibrary();
             
-            InvertedIndex indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6");
+            InvertedIndex indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6", "db/db7", "db/db8");
+			indexer.loadFromDatabase();
+			indexer.setUpSearchEngine();
+			// indexer.updateTermWeightAndDocNorm();
+			// indexer.printDB(indexer.docNormDb);
+			HashMap<Integer, Double> partialScore = indexer.searchAndScore("a fucking World");
+			/**
+            // a static method that loads the RocksDB C++ library.
             System.out.println("contentDb");
             System.out.println("Key : hkust" );
             byte[] content = indexer.contentDb.get(new String("hkust").getBytes());
@@ -352,6 +505,7 @@ public class InvertedIndex
             System.out.println("Key : 1");
             content = indexer.titleDb.get(new String("1").getBytes());
             System.out.println("Value : " + new String(content));
+			*/
 
 
         }
