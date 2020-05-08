@@ -7,6 +7,7 @@ import java.util.*;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.*; 
 import static java.util.stream.Collectors.*;
 import static java.util.Map.Entry.*;
 
@@ -41,12 +42,11 @@ public class Engine
     }
 
 	// retrieve topK pages based on raw query
-    public ArrayList<Map<String,String>> retrieve(String query, Integer topK){
+    public ArrayList<HashMap<String,String>> retrieve(String query, Integer topK){
 
-		ArrayList<Map<String,String>> results = new ArrayList<Map<String,String>>();
+		ArrayList<HashMap<String,String>> results = new ArrayList<HashMap<String,String>>();
         try{
 			HashMap<Integer, Double> partialScore = indexer.searchAndScore(query);
-            System.out.println(partialScore);
 
 			// ranking based on score
 			ArrayList<Integer> sortedPages = new ArrayList<Integer>();
@@ -59,15 +59,56 @@ public class Engine
 					return v2.compareTo(v1); 
 				}
 			}); 
-			for (Map.Entry<Integer, Double> obj : list) { 
+			for (HashMap.Entry<Integer, Double> obj : list) { 
 				sortedPages.add(obj.getKey()); 
 			} 
-            System.out.println(sortedPages);
 			for(int i = 0; i < topK; i++) {
-				// TODO: return details of top pages
-				int pageid = sortedPages[i];
-				// score, title, url, date, pagesize, key_freq (String), parents, children (ArrayList<String>)
-				continue;
+				// return details of top pages
+				HashMap<String, String> page = new HashMap<String, String>();
+				int pageid = sortedPages.get(i);
+				page.put("score", String.valueOf(partialScore.get(pageid)));
+				page.put("url", this.indexer.getURL(pageid));
+				page.put("title", this.indexer.getPageTitle(pageid));
+				// date
+				Date date =  new Date(this.indexer.getLastModifiedData(String.valueOf(pageid)));  
+				DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");  
+				String strDate = dateFormat.format(date);  
+				page.put("date", strDate);
+				page.put("pagesize", String.valueOf(this.indexer.getPageSize(pageid)));
+				// key frequency
+				HashMap<String, Integer> WordCount = this.indexer.getFileWordCount(pageid);
+				String keyFreq = "";
+				for (Map.Entry<String, Integer> entry : WordCount.entrySet()) {
+				    String key = entry.getKey();
+					String value = String.valueOf(entry.getValue());
+					keyFreq = keyFreq + key + ":" + value + ";";
+				}
+				if(keyFreq.length() > 0){
+					keyFreq = keyFreq.substring(0, keyFreq.length()-1);
+				}
+				page.put("key_freq", keyFreq);
+				// parents, children
+				FileLink fl = new FileLink();
+				fl.readLinkDB("linkdb");
+				HashSet<String> childLinks = fl.getChildren(String.valueOf(pageid));
+				HashSet<String> parentLinks = fl.getParents(String.valueOf(pageid));
+				String children = "";
+				String parents = "";
+				for (String link : parentLinks) {
+				   parents = parents + this.indexer.getURL(Integer.parseInt(link)) + ";";
+				}
+				for (String link : childLinks) {
+				   children = children + this.indexer.getURL(Integer.parseInt(link)) + ";";
+				}
+				if(parents.length() > 0){
+					parents = parents.substring(0, parents.length()-1);
+				}
+				if(children.length() > 0){
+					children = children.substring(0, children.length()-1);
+				}
+				page.put("parents", parents);
+				page.put("children", children);
+				results.add(page);
 			}
         }catch(Exception e){
 			e.printStackTrace();

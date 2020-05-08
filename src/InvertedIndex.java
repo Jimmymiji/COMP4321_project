@@ -27,6 +27,7 @@ public class InvertedIndex
     private HashMap<String, HashMap<Integer, ArrayList<Integer>>> contentInvertedTable;
     private HashMap<String, HashMap<Integer, ArrayList<Integer>>> titleInvertedTable;
     private HashMap<String, HashMap<Integer, Double>> termWeightTable;
+	private HashMap<Integer,String> IDtoURLTable;
     private HashMap<Integer, Double> docNormTable;
     private StopStem stopStem;
 
@@ -58,6 +59,7 @@ public class InvertedIndex
         this.contentInvertedTable = new HashMap<String, HashMap<Integer, ArrayList<Integer>>>();
     	this.termWeightTable = new HashMap<String, HashMap<Integer, Double>>();
     	this.docNormTable = new HashMap<Integer, Double>();
+		this.IDtoURLTable = new HashMap<Integer,String>();
     }
 
     public void loadFromDatabase() throws RocksDBException{
@@ -101,15 +103,14 @@ public class InvertedIndex
             this.titleInvertedTable.put(word,docPosMap);
         }
 		
-		RocksDB URLdb = RocksDB.open(options, "db/db");
+		RocksDB URLdb = RocksDB.open(this.options, "db/db");
 		RocksIterator iter = URLdb.newIterator();
 		// build a forwarded table: ID - URL
-		HashMap<String,String> IDtoURL = new HashMap<String,String>();
 		for(iter.seekToFirst(); iter.isValid(); iter.next()){
 			String URL = new String(iter.key());
-			String PageID = new String(iter.value());
+			int PageID = Integer.parseInt(new String(iter.value()));
 			if (!URL.equals("total_count")){
-				IDtoURL.put(PageID,URL);
+				this.IDtoURLTable.put(PageID,URL);
 			}
 		}
     }
@@ -313,6 +314,11 @@ public class InvertedIndex
         return countTable;
     }
 
+    public String getURL(int ID){
+        String url = this.IDtoURLTable.get(ID);
+        return url;
+    }
+
     public Long getLastModifiedData(String ID) throws RocksDBException { 
         byte[] content = this.dateDb.get(ID.getBytes());
         if (content == null){
@@ -465,10 +471,13 @@ public class InvertedIndex
             
             InvertedIndex indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6", "db/db7", "db/db8");
 			indexer.loadFromDatabase();
-			indexer.setUpSearchEngine();
+			// indexer.setUpSearchEngine();
 			// indexer.updateTermWeightAndDocNorm();
 			// indexer.printDB(indexer.docNormDb);
-			HashMap<Integer, Double> partialScore = indexer.searchAndScore("a fucking World");
+			// HashMap<Integer, Double> partialScore = indexer.searchAndScore("a fucking World");
+            System.out.println(indexer.getURL(1));
+            System.out.println(indexer.getURL(29));
+            System.out.println(indexer.getURL(18));
 			/**
             // a static method that loads the RocksDB C++ library.
             System.out.println("contentDb");
