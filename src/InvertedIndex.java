@@ -23,13 +23,13 @@ public class InvertedIndex
     public RocksDB titleDb;
     public RocksDB termWeightDb;
     public RocksDB docNormDb;
+    public StopStem stopStem;
     private Options options;
     private HashMap<String, HashMap<Integer, ArrayList<Integer>>> contentInvertedTable;
     private HashMap<String, HashMap<Integer, ArrayList<Integer>>> titleInvertedTable;
     private HashMap<String, HashMap<Integer, Double>> termWeightTable;
 	private HashMap<Integer,String> IDtoURLTable;
     private HashMap<Integer, Double> docNormTable;
-    private StopStem stopStem;
 
     InvertedIndex(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath, String termWeightDbPath, String docNormDbPath) throws RocksDBException
     {
@@ -140,6 +140,65 @@ public class InvertedIndex
             this.docNormTable.put(pageID,norm);
         }
     }
+
+    public boolean titleContainsPhrase(ArrayList<ArrayList<String>> phrases, Integer pageID){
+		for(int i = 0; i < phrases.size(); i++)
+		{
+		    if (phrases.get(i).size() <= 1){
+				continue;
+			}
+			ArrayList<String> phrase = phrases.get(i);
+			if(!this.titleInvertedTable.containsKey(phrase.get(0)) || !this.titleInvertedTable.get(phrase.get(0)).containsKey(pageID)){
+				return false;
+			}
+			ArrayList<Integer> firstwordPos = this.titleInvertedTable.get(phrase.get(0)).get(pageID);
+			for(int j = 1; j < phrase.size(); j++){
+				ArrayList<Integer> currentwordPos = this.titleInvertedTable.get(phrase.get(j)).get(pageID);
+				ArrayList<Integer> requiredPos = new ArrayList<Integer>();
+				for(int k = 0; k < firstwordPos.size(); k++) {
+					// increment required pos by j
+				    int oldVal = firstwordPos.get(k);
+					int newVal = oldVal + j;
+					requiredPos.add(newVal);
+				}
+				// check whether match any item
+				if(Collections.disjoint(currentwordPos, requiredPos)){
+					return false;
+				} // return true when no match
+			}
+		}
+        return true;
+    }
+
+    public boolean contentContainsPhrase(ArrayList<ArrayList<String>> phrases, Integer pageID){
+		for(int i = 0; i < phrases.size(); i++)
+		{
+		    if (phrases.get(i).size() <= 1){
+				continue;
+			}
+			ArrayList<String> phrase = phrases.get(i);
+			if(!this.contentInvertedTable.containsKey(phrase.get(0)) || !this.contentInvertedTable.get(phrase.get(0)).containsKey(pageID)){
+				return false;
+			}
+			ArrayList<Integer> firstwordPos = this.contentInvertedTable.get(phrase.get(0)).get(pageID);
+			for(int j = 1; j < phrase.size(); j++){
+				ArrayList<Integer> currentwordPos = this.contentInvertedTable.get(phrase.get(j)).get(pageID);
+				ArrayList<Integer> requiredPos = new ArrayList<Integer>();
+				for(int k = 0; k < firstwordPos.size(); k++) {
+					// increment required pos by j
+				    int oldVal = firstwordPos.get(k);
+					int newVal = oldVal + j;
+					requiredPos.add(newVal);
+				}
+				// check whether match any item
+				if(Collections.disjoint(currentwordPos, requiredPos)){
+					return false;
+				} // return true when no match
+			}
+		}
+        return true;
+    }
+
 
     public void writeToDatabase() throws RocksDBException{
         Iterator<HashMap.Entry<String, HashMap<Integer, ArrayList<Integer>>>> contentIt = this.contentInvertedTable.entrySet().iterator();
@@ -414,26 +473,8 @@ public class InvertedIndex
 
 
 	/*return final scores (after normalization if any)*/
-    public HashMap<Integer, Double> searchAndScore(String query){
+    public HashMap<Integer, Double> searchAndScore(Vector<String> keyWords){
 		HashMap<Integer, Double> results = new HashMap<Integer, Double>();
-		Vector<String> queryVector = new Vector<String>();
-		StringTokenizer st = new StringTokenizer(query);
-		while (st.hasMoreTokens()) {
-			queryVector.add(st.nextToken());
-		}
-		// stop and stem for raw query
-		Vector<String> keyWords = new Vector<String>();
-		for(int i = 0;i < queryVector.size(); i++){
-			String word = queryVector.get(i);
-			if (stopStem.isStopWord(word)){
-				continue;
-			}
-			String stemWord = stopStem.stem(word);
-            if (!stemWord.equals("")){
-				keyWords.add(stemWord);
-			}
-		}
-		System.out.println(keyWords);
 		// calculate |Q| for cosine similarity
 		double normQ = Math.sqrt(keyWords.size());
 
@@ -455,10 +496,6 @@ public class InvertedIndex
 		// update results by doing normalization (cosine)
 		for (Integer key : results.keySet()) {
 			results.replace(key, ((double)results.get(key)) / (Math.sqrt(this.docNormTable.get(key)) * normQ));
-		}
-
-		if(results.isEmpty()){
-			return null;	
 		}
 		return results;
     }

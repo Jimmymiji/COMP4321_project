@@ -8,8 +8,10 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.*; 
+import java.util.StringTokenizer;
 import static java.util.stream.Collectors.*;
 import static java.util.Map.Entry.*;
+
 
 
 public class Engine
@@ -41,12 +43,52 @@ public class Engine
         return true;
     }
 
-	// retrieve topK pages based on raw query
+	/*retrieve topK pages based on raw query*/
     public ArrayList<HashMap<String,String>> retrieve(String query, Integer topK){
 
 		ArrayList<HashMap<String,String>> results = new ArrayList<HashMap<String,String>>();
+		Vector<String> queryVector = new Vector<String>();
+		StringTokenizer st = new StringTokenizer(query);
+		while (st.hasMoreTokens()) {
+			queryVector.add(st.nextToken());
+		}
+		// stop and stem for raw query
+		Vector<String> keyWords = new Vector<String>();
+		ArrayList<ArrayList<String>> phrases = new ArrayList<ArrayList<String>>();
+		int flag = 0; 
+		ArrayList<String> phrase = new ArrayList<String>();
+		for(int i = 0;i < queryVector.size(); i++){
+			String word = queryVector.get(i);
+			if (this.indexer.stopStem.isStopWord(word)){
+				continue;
+			}
+			if (word.startsWith("\"") || (flag==1 && !word.endsWith("\""))){
+				flag = 1; // put this word in a phrase
+			} else if (flag == 1 && word.endsWith("\"")){
+				flag = 2; // this is the final word of a phrase
+			} else {
+				flag = 0;
+			}
+			String stemWord = this.indexer.stopStem.stem(word);
+            if (!stemWord.equals("")){
+				keyWords.add(stemWord);
+				phrase.add(stemWord);
+				if (flag == 2){
+					ArrayList<String> clone = new ArrayList<String>(); 
+					clone.addAll(phrase);
+					phrases.add(clone);
+					phrase.clear();
+				} else if (flag == 0){
+					ArrayList<String> clone = new ArrayList<String>(); 
+					clone.addAll(phrase);
+					phrases.add(clone);
+					phrase.clear();
+				}
+			}
+		}
+		System.out.println(phrases);
         try{
-			HashMap<Integer, Double> partialScore = indexer.searchAndScore(query);
+			HashMap<Integer, Double> partialScore = indexer.searchAndScore(keyWords);
 
 			// ranking based on score
 			ArrayList<Integer> sortedPages = new ArrayList<Integer>();
@@ -62,10 +104,14 @@ public class Engine
 			for (HashMap.Entry<Integer, Double> obj : list) { 
 				sortedPages.add(obj.getKey()); 
 			} 
-			for(int i = 0; i < topK; i++) {
+			int count = 0;
+			for(int i = 0; i < sortedPages.size(); i++) {
 				// return details of top pages
 				HashMap<String, String> page = new HashMap<String, String>();
 				int pageid = sortedPages.get(i);
+				if(!this.indexer.contentContainsPhrase(phrases, pageid) && !this.indexer.titleContainsPhrase(phrases, pageid)){
+					continue;
+				}
 				page.put("score", String.valueOf(partialScore.get(pageid)));
 				page.put("url", this.indexer.getURL(pageid));
 				page.put("title", this.indexer.getPageTitle(pageid));
@@ -109,7 +155,10 @@ public class Engine
 				page.put("parents", parents);
 				page.put("children", children);
 				results.add(page);
+				count = count + 1;
+				if(count >= topK){break;}
 			}
+			System.out.println(results.size());
         }catch(Exception e){
 			e.printStackTrace();
 		}
@@ -124,7 +173,8 @@ public class Engine
         {
 			// test program
             Engine engine = new Engine("db/db1","db/db2","db/db3","db/db4","db/db5", "db/db6", "db/db7", "db/db8");
-			engine.retrieve("computer a fucking world", 5);
+			// engine.retrieve("computer a fucking world", 5);
+			engine.retrieve("\"Hong Kong\" university my life", 5);
 
         }
         catch(RocksDBException e)
