@@ -24,6 +24,7 @@ public class InvertedIndex
     public RocksDB termWeightDb;
     public RocksDB docNormDb;
     public StopStem stopStem;
+    public RocksDB URLdb;
     private Options options;
     private HashMap<String, HashMap<Integer, ArrayList<Integer>>> contentInvertedTable;
     private HashMap<String, HashMap<Integer, ArrayList<Integer>>> titleInvertedTable;
@@ -31,7 +32,7 @@ public class InvertedIndex
 	private HashMap<Integer,String> IDtoURLTable;
     private HashMap<Integer, Double> docNormTable;
 
-    InvertedIndex(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath, String termWeightDbPath, String docNormDbPath) throws RocksDBException
+    public InvertedIndex(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath, String termWeightDbPath, String docNormDbPath,String urlDbPath) throws RocksDBException
     {
         if(!checkDbPath(ContentDbPath) ||
             !checkDbPath(titleKeyWordDbPath)  ||
@@ -40,7 +41,8 @@ public class InvertedIndex
             !checkDbPath(pageSizeDbPath) ||
             !checkDbPath(titleDbPath) ||
             !checkDbPath(termWeightDbPath) ||
-            !checkDbPath(docNormDbPath) ){
+            !checkDbPath(docNormDbPath) ||
+            !checkDbPath(urlDbPath)){
                 System.out.println("indexer check path failed");
         }
        
@@ -54,12 +56,17 @@ public class InvertedIndex
         this.titleDb = RocksDB.open(this.options,titleDbPath);
         this.termWeightDb = RocksDB.open(this.options,termWeightDbPath);
         this.docNormDb = RocksDB.open(this.options,docNormDbPath);
+        this.URLdb = RocksDB.open(this.options, urlDbPath);
+        if (URLdb.get("total_count".getBytes()) == null){
+				URLdb.put("total_count".getBytes(), "0".getBytes());
+		}
         this.stopStem = new StopStem("stopwords.txt");
         this.titleInvertedTable = new HashMap<String, HashMap<Integer, ArrayList<Integer>>>();
         this.contentInvertedTable = new HashMap<String, HashMap<Integer, ArrayList<Integer>>>();
     	this.termWeightTable = new HashMap<String, HashMap<Integer, Double>>();
     	this.docNormTable = new HashMap<Integer, Double>();
 		this.IDtoURLTable = new HashMap<Integer,String>();
+        System.out.println("indexer init done");
     }
 
     public void loadFromDatabase() throws RocksDBException{
@@ -82,7 +89,7 @@ public class InvertedIndex
             }
             this.contentInvertedTable.put(word,docPosMap);
         }
-
+        System.out.println("load contentInvertedTable");
         RocksIterator titleIter = this.titleKeyWordDb.newIterator();
         for(titleIter.seekToFirst(); titleIter.isValid(); titleIter.next()) {
         
@@ -102,17 +109,20 @@ public class InvertedIndex
             }
             this.titleInvertedTable.put(word,docPosMap);
         }
+		System.out.println("load titleInvertedTable");
 		
-		RocksDB URLdb = RocksDB.open(this.options, "db/db");
-		RocksIterator iter = URLdb.newIterator();
+        RocksIterator iter = this.URLdb.newIterator();
+        System.out.println("liter opened");
 		// build a forwarded table: ID - URL
 		for(iter.seekToFirst(); iter.isValid(); iter.next()){
-			String URL = new String(iter.key());
-			int PageID = Integer.parseInt(new String(iter.value()));
-			if (!URL.equals("total_count")){
-				this.IDtoURLTable.put(PageID,URL);
-			}
+		    String URL = new String(iter.key());
+		    int PageID = Integer.parseInt(new String(iter.value()));
+		    if (!URL.equals("total_count")){
+		        this.IDtoURLTable.put(PageID,URL);
+		    }
 		}
+        System.out.println("load URLdb");
+		
     }
 
 
@@ -506,7 +516,7 @@ public class InvertedIndex
 
             RocksDB.loadLibrary();
             
-            InvertedIndex indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6", "db/db7", "db/db8");
+            InvertedIndex indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6", "db/db7", "db/db8","db/db");
 			indexer.loadFromDatabase();
 			// indexer.setUpSearchEngine();
 			// indexer.updateTermWeightAndDocNorm();

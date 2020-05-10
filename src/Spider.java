@@ -30,7 +30,7 @@ import java.io.*;
 public class Spider
 {
 	private String url;
-	Spider(String _url)
+	public Spider(String _url)
 	{
 		url = _url;
 	}
@@ -238,14 +238,14 @@ public class Spider
 		String dbPath = "db/db";
 		InvertedIndex indexer;
 		try{
-			indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6", "db/db7", "db/db8");
+			indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6", "db/db7", "db/db8","db/db");
 			indexer.loadFromDatabase();
 		}
-		catch(Exception e){
-			e.printStackTrace();
-			return;
-		}
-
+		catch (RocksDBException rdbe) {
+        	rdbe.printStackTrace(System.err);
+			return ;
+       	}
+		System.out.println("indexer in spider init done");
        // A static method that loads the RocksDB C++ library.
         RocksDB.loadLibrary();
 
@@ -254,23 +254,24 @@ public class Spider
             Options options = new Options();
             options.setCreateIfMissing(true);
 
-            // Creat and open the database;
-            RocksDB db; 
-            db = RocksDB.open(options, dbPath);
-			if (db.get("total_count".getBytes()) == null){
-				db.put("total_count".getBytes(), "0".getBytes());
-			}
+            //Creat and open the database;
+            RocksDB db = indexer.URLdb; 
+            //db = RocksDB.open(options, dbPath);
 
+			// if (db.get("total_count".getBytes()) == null){
+			// 	db.put("total_count".getBytes(), "0".getBytes());
+			// }
 
+			
 			FileLink fl = new FileLink();
 			fl.readLinkDB("linkdb");
 			//fl.printLinkDB();
-
+			System.out.println("init Spider");
 			// javac -cp lib/htmlparser.jar:lib/rocksdbjni-6.8.0-linux64.jar COMP4321/*.java 
 			// java -cp lib/rocksdbjni-6.8.0-linux64.jar:lib/htmlparser.jar:. COMP4321.Spider
 			Spider spider = new Spider("https://cse.ust.hk");
 			//"https://stackoverflow.com/questions/7846136/how-to-get-last-modified-date-from-header-to-string"
-			spider.BFSCrawl(db, 30, fl,indexer);
+			spider.BFSCrawl(db,100, fl,indexer);
 			spider.printdb(db);
 			fl.storeLinkDB("linkdb");
 			indexer.updateTermWeightAndDocNorm();

@@ -16,24 +16,30 @@ import static java.util.Map.Entry.*;
 
 public class Engine
 {
-	private StopStem stopStem;
-	private InvertedIndex indexer;
+	public StopStem stopStem;
+	public InvertedIndex indexer;
+	private String linkDbPath;
 
-	Engine(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath,String termWeightDbPath,String docNormDbPath) throws RocksDBException
+	public Engine(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath,String termWeightDbPath,String docNormDbPath,String urlDbPath,String linkDbPath) throws RocksDBException
 	{
 		if(!checkDbPath(ContentDbPath) ||
 			!checkDbPath(titleKeyWordDbPath)  ||
 			!checkDbPath(dateDbPath) ||
 			!checkDbPath(wordCountDbPath) ||
+			!checkDbPath(titleDbPath) ||
 			!checkDbPath(pageSizeDbPath) ||
             !checkDbPath(termWeightDbPath) ||
-            !checkDbPath(docNormDbPath) ){
+            !checkDbPath(docNormDbPath) ||
+			!checkDbPath(urlDbPath)) {
 				System.out.println("indexer check path failed");}
-		this.indexer = new InvertedIndex(ContentDbPath,titleKeyWordDbPath,dateDbPath,wordCountDbPath,pageSizeDbPath,titleDbPath,termWeightDbPath,docNormDbPath);
+		this.linkDbPath = linkDbPath;
+		this.indexer = new InvertedIndex(ContentDbPath,titleKeyWordDbPath,dateDbPath,wordCountDbPath,pageSizeDbPath,titleDbPath,termWeightDbPath,docNormDbPath,urlDbPath);
 		// initialize indexer
 		this.indexer.loadFromDatabase();
 		this.indexer.setUpSearchEngine();
 	}
+
+
 
     public boolean checkDbPath(String path){
         if(Files.notExists(Paths.get(path))){
@@ -127,7 +133,7 @@ public class Engine
 				for (Map.Entry<String, Integer> entry : WordCount.entrySet()) {
 				    String key = entry.getKey();
 					String value = String.valueOf(entry.getValue());
-					keyFreq = keyFreq + key + ":" + value + ";";
+					keyFreq = keyFreq + key + ": " + value + "; ";
 				}
 				if(keyFreq.length() > 0){
 					keyFreq = keyFreq.substring(0, keyFreq.length()-1);
@@ -135,7 +141,7 @@ public class Engine
 				page.put("key_freq", keyFreq);
 				// parents, children
 				FileLink fl = new FileLink();
-				fl.readLinkDB("linkdb");
+				fl.readLinkDB(this.linkDbPath);
 				HashSet<String> childLinks = fl.getChildren(String.valueOf(pageid));
 				HashSet<String> parentLinks = fl.getParents(String.valueOf(pageid));
 				String children = "";
@@ -161,10 +167,13 @@ public class Engine
 			System.out.println(results.size());
         }catch(Exception e){
 			e.printStackTrace();
+			HashMap<String, String> page = new HashMap<String,String>();
+			page.put(e.toString(),e.toString());
+			results.add(page);
 		}
-		if(results.size()==0){
-			return null;	
-		}
+		// if(results.size()==0){
+		// 	return null;	
+		// }
 		return results;
     }
 
@@ -172,10 +181,15 @@ public class Engine
         try
         {
 			// test program
-            Engine engine = new Engine("db/db1","db/db2","db/db3","db/db4","db/db5", "db/db6", "db/db7", "db/db8");
-			// engine.retrieve("computer a fucking world", 5);
-			engine.retrieve("\"Hong Kong\" university my life", 5);
-
+            Engine engine = new Engine("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6","db/db7","db/db8","db/db","linkdb");
+			ArrayList<HashMap<String,String>> results = engine.retrieve(args[0], 5);
+			for(HashMap<String,String> p:results){
+				System.out.println("New page:-----------------------------");
+				for(Map.Entry<String,String> e: p.entrySet()){
+					System.out.println(e.getKey());
+					System.out.println(e.getValue());
+				}
+			}
         }
         catch(RocksDBException e)
         {
@@ -184,3 +198,15 @@ public class Engine
     }
 }
 
+// public Engine createE(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath,String termWeightDbPath,String docNormDbPath,String urlDbPath)
+// 	{
+// 		Engine e;
+// 		try{
+// 			e = new Engine(ContentDbPath,titleKeyWordDbPath,dateDbPath,wordCountDbPath,pageSizeDbPath,titleDbPath,termWeightDbPath,docNormDbPath,urlDbPath);
+// 		}
+// 		catch(RocksDBException e)
+//     	{
+//         	System.err.println(e.toString());
+//     	}
+// 		return e;
+// 	}
