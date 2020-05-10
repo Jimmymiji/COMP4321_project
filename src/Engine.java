@@ -39,14 +39,28 @@ public class Engine
 		this.indexer.setUpSearchEngine();
 	}
 
-
-
     public boolean checkDbPath(String path){
         if(Files.notExists(Paths.get(path))){
             File f = new File(path);
             return f.mkdir();
         }
         return true;
+    }
+
+    public ArrayList<Integer> reorderOnPhrase(ArrayList<ArrayList<String>> phrases, ArrayList<Integer> sortedPages){
+		ArrayList<Integer> newSortedPages = new ArrayList<Integer>();
+		ArrayList<Integer> noMatchPhrasePages = new ArrayList<Integer>();
+		for(int i=0; i < sortedPages.size(); i++){
+			int pageid = sortedPages.get(i);
+			if(this.indexer.contentContainsPhrase(phrases, pageid) || this.indexer.titleContainsPhrase(phrases, pageid)){
+				newSortedPages.add(pageid);
+			} else {
+				noMatchPhrasePages.add(pageid);	
+			}
+		}
+		// return matched pages first
+		newSortedPages.addAll(noMatchPhrasePages);
+		return newSortedPages;
     }
 
 	/*retrieve topK pages based on raw query*/
@@ -92,7 +106,6 @@ public class Engine
 				}
 			}
 		}
-		System.out.println(phrases);
         try{
 			HashMap<Integer, Double> partialScore = indexer.searchAndScore(keyWords);
 
@@ -110,14 +123,11 @@ public class Engine
 			for (HashMap.Entry<Integer, Double> obj : list) { 
 				sortedPages.add(obj.getKey()); 
 			} 
-			int count = 0;
-			for(int i = 0; i < sortedPages.size(); i++) {
+			sortedPages = reorderOnPhrase(phrases, sortedPages);
+			for(int i = 0; i < topK; i++) {
 				// return details of top pages
 				HashMap<String, String> page = new HashMap<String, String>();
 				int pageid = sortedPages.get(i);
-				if(!this.indexer.contentContainsPhrase(phrases, pageid) && !this.indexer.titleContainsPhrase(phrases, pageid)){
-					continue;
-				}
 				page.put("score", String.valueOf(partialScore.get(pageid)));
 				page.put("url", this.indexer.getURL(pageid));
 				page.put("title", this.indexer.getPageTitle(pageid));
@@ -161,10 +171,7 @@ public class Engine
 				page.put("parents", parents);
 				page.put("children", children);
 				results.add(page);
-				count = count + 1;
-				if(count >= topK){break;}
 			}
-			System.out.println(results.size());
         }catch(Exception e){
 			e.printStackTrace();
 			HashMap<String, String> page = new HashMap<String,String>();
