@@ -209,6 +209,14 @@ public class InvertedIndex
         return true;
     }
 
+    public boolean checkTitleMatch(String word, Integer pageID){
+		if(this.titleInvertedTable.containsKey(word) && this.titleInvertedTable.get(word).containsKey(pageID)){
+			System.out.println(word);
+			System.out.println(pageID);
+			return true;
+		}
+        return false;
+    }
 
     public void writeToDatabase() throws RocksDBException{
         Iterator<HashMap.Entry<String, HashMap<Integer, ArrayList<Integer>>>> contentIt = this.contentInvertedTable.entrySet().iterator();
@@ -500,7 +508,12 @@ public class InvertedIndex
 				double weight = entry.getValue();
 				// update partial score table
 				double score = results.containsKey(pageID) ? results.get(pageID) : 0;
-				results.put(pageID, score + weight);
+				// double the score of title match pages to favor title match
+				if(checkTitleMatch(word, pageID)){
+					results.put(pageID, score + 2*weight);
+				} else {
+					results.put(pageID, score + weight);
+				}
 			}
 		}
 		// update results by doing normalization (cosine)
@@ -521,11 +534,6 @@ public class InvertedIndex
 			// indexer.setUpSearchEngine();
 			// indexer.updateTermWeightAndDocNorm();
 			// indexer.printDB(indexer.docNormDb);
-			// HashMap<Integer, Double> partialScore = indexer.searchAndScore("a fucking World");
-            System.out.println(indexer.getURL(1));
-            System.out.println(indexer.getURL(29));
-            System.out.println(indexer.getURL(18));
-			/**
             // a static method that loads the RocksDB C++ library.
             System.out.println("contentDb");
             System.out.println("Key : hkust" );
@@ -561,7 +569,6 @@ public class InvertedIndex
             System.out.println("Key : 1");
             content = indexer.titleDb.get(new String("1").getBytes());
             System.out.println("Value : " + new String(content));
-			*/
 
 
         }

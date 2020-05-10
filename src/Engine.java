@@ -48,6 +48,7 @@ public class Engine
     }
 
     public ArrayList<Integer> reorderOnPhrase(ArrayList<ArrayList<String>> phrases, ArrayList<Integer> sortedPages){
+		// mechanism: return matched page first, then no matched pages based on score
 		ArrayList<Integer> newSortedPages = new ArrayList<Integer>();
 		ArrayList<Integer> noMatchPhrasePages = new ArrayList<Integer>();
 		for(int i=0; i < sortedPages.size(); i++){
@@ -58,7 +59,6 @@ public class Engine
 				noMatchPhrasePages.add(pageid);	
 			}
 		}
-		// return matched pages first
 		newSortedPages.addAll(noMatchPhrasePages);
 		return newSortedPages;
     }
@@ -190,6 +190,7 @@ public class Engine
 			// test program
             Engine engine = new Engine("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6","db/db7","db/db8","db/db","linkdb");
 			ArrayList<HashMap<String,String>> results = engine.retrieve(args[0], 5);
+			/*
 			for(HashMap<String,String> p:results){
 				System.out.println("New page:-----------------------------");
 				for(Map.Entry<String,String> e: p.entrySet()){
@@ -197,6 +198,7 @@ public class Engine
 					System.out.println(e.getValue());
 				}
 			}
+			*/
         }
         catch(RocksDBException e)
         {
