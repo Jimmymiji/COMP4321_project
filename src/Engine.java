@@ -14,10 +14,10 @@ import static java.util.Map.Entry.*;
 
 public class Engine
 {
-	private StopStem stopStem;
-	private InvertedIndex indexer;
+	public StopStem stopStem;
+	public InvertedIndex indexer;
 
-	Engine(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath,String termWeightDbPath,String docNormDbPath) throws RocksDBException
+	public Engine(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath,String termWeightDbPath,String docNormDbPath,String urlDbPath) throws RocksDBException
 	{
 		if(!checkDbPath(ContentDbPath) ||
 			!checkDbPath(titleKeyWordDbPath)  ||
@@ -25,13 +25,16 @@ public class Engine
 			!checkDbPath(wordCountDbPath) ||
 			!checkDbPath(pageSizeDbPath) ||
             !checkDbPath(termWeightDbPath) ||
-            !checkDbPath(docNormDbPath) ){
+            !checkDbPath(docNormDbPath) ||
+			!checkDbPath(urlDbPath)) {
 				System.out.println("indexer check path failed");}
-		this.indexer = new InvertedIndex(ContentDbPath,titleKeyWordDbPath,dateDbPath,wordCountDbPath,pageSizeDbPath,titleDbPath,termWeightDbPath,docNormDbPath);
+		this.indexer = new InvertedIndex(ContentDbPath,titleKeyWordDbPath,dateDbPath,wordCountDbPath,pageSizeDbPath,titleDbPath,termWeightDbPath,docNormDbPath,urlDbPath);
 		// initialize indexer
 		this.indexer.loadFromDatabase();
 		this.indexer.setUpSearchEngine();
 	}
+
+
 
     public boolean checkDbPath(String path){
         if(Files.notExists(Paths.get(path))){
@@ -123,9 +126,15 @@ public class Engine
         try
         {
 			// test program
-            Engine engine = new Engine("db/db1","db/db2","db/db3","db/db4","db/db5", "db/db6", "db/db7", "db/db8");
-			engine.retrieve("computer a fucking world", 5);
-
+            Engine engine = new Engine("db/db1","db/db2","db/db3","db/db4","db/db5", "db/db6", "db/db7", "db/db8","db/db");
+			ArrayList<HashMap<String,String>> results = engine.retrieve(args[1], 5);
+			for(HashMap<String,String> p:results){
+				System.out.println("New page:-----------------------------");
+				for(Map.Entry<String,String> e: p.entrySet()){
+					System.out.println(e.getKey());
+					System.out.println(e.getValue());
+				}
+			}
         }
         catch(RocksDBException e)
         {
@@ -134,3 +143,15 @@ public class Engine
     }
 }
 
+// public Engine createE(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath,String termWeightDbPath,String docNormDbPath,String urlDbPath)
+// 	{
+// 		Engine e;
+// 		try{
+// 			e = new Engine(ContentDbPath,titleKeyWordDbPath,dateDbPath,wordCountDbPath,pageSizeDbPath,titleDbPath,termWeightDbPath,docNormDbPath,urlDbPath);
+// 		}
+// 		catch(RocksDBException e)
+//     	{
+//         	System.err.println(e.toString());
+//     	}
+// 		return e;
+// 	}

@@ -36,7 +36,7 @@ public class Test
         {
             // a static method that loads the RocksDB C++ library.
             RocksDB.loadLibrary();
-            InvertedIndex indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5", "db/db6", "db/db7", "db/db8");
+            InvertedIndex indexer = new InvertedIndex("db/db1","db/db2","db/db3","db/db4","db/db5", "db/db6", "db/db7", "db/db8","db/db");
             indexer.loadFromDatabase();
 			// URL-ID DB
 			Options options = new Options();
