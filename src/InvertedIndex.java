@@ -32,7 +32,7 @@ public class InvertedIndex
     private HashMap<Integer, Double> docNormTable;
     private StopStem stopStem;
 
-    InvertedIndex(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath, String termWeightDbPath, String docNormDbPath,String urlDbPath) throws RocksDBException
+    public InvertedIndex(String ContentDbPath,String titleKeyWordDbPath,String dateDbPath,String wordCountDbPath,String pageSizeDbPath,String titleDbPath, String termWeightDbPath, String docNormDbPath,String urlDbPath) throws RocksDBException
     {
         if(!checkDbPath(ContentDbPath) ||
             !checkDbPath(titleKeyWordDbPath)  ||

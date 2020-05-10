@@ -30,7 +30,7 @@ import java.io.*;
 public class Spider
 {
 	private String url;
-	Spider(String _url)
+	public Spider(String _url)
 	{
 		url = _url;
 	}
@@ -271,7 +271,7 @@ public class Spider
 			// java -cp lib/rocksdbjni-6.8.0-linux64.jar:lib/htmlparser.jar:. COMP4321.Spider
 			Spider spider = new Spider("https://cse.ust.hk");
 			//"https://stackoverflow.com/questions/7846136/how-to-get-last-modified-date-from-header-to-string"
-			spider.BFSCrawl(db, 30, fl,indexer);
+			spider.BFSCrawl(db,100, fl,indexer);
 			spider.printdb(db);
 			fl.storeLinkDB("linkdb");
 			indexer.updateTermWeightAndDocNorm();
