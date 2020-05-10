@@ -211,8 +211,6 @@ public class InvertedIndex
 
     public boolean checkTitleMatch(String word, Integer pageID){
 		if(this.titleInvertedTable.containsKey(word) && this.titleInvertedTable.get(word).containsKey(pageID)){
-			System.out.println(word);
-			System.out.println(pageID);
 			return true;
 		}
         return false;

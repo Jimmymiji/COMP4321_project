@@ -190,7 +190,6 @@ public class Engine
 			// test program
             Engine engine = new Engine("db/db1","db/db2","db/db3","db/db4","db/db5","db/db6","db/db7","db/db8","db/db","linkdb");
 			ArrayList<HashMap<String,String>> results = engine.retrieve(args[0], 5);
-			/*
 			for(HashMap<String,String> p:results){
 				System.out.println("New page:-----------------------------");
 				for(Map.Entry<String,String> e: p.entrySet()){
@@ -198,7 +197,6 @@ public class Engine
 					System.out.println(e.getValue());
 				}
 			}
-			*/
         }
         catch(RocksDBException e)
         {
