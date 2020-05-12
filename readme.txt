@@ -14,6 +14,10 @@ when wrok on web server:
     cp src/projectMain.* ./
     
     access the webpage by entering  "IPOFYOURSERVER:8080/comp4321/projectMain.html" in your browser
+    
+    If you want to access the web page on our server,make sure you are on campus or connected to HKUST vpn.
+  	URL:  143.89.219.52:8080/comp4321/projectMain.html 
+	drop cluah@connect.ust.hk an notification email so that he will turn on the server.
 
 
 To compile:
